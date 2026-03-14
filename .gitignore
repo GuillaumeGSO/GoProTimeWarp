@@ -1,0 +1,13 @@
+# Video files
+*.MP4
+*.mp4
+*.MOV
+*.mov
+*.avi
+*.AVI
+
+# Binary files
+*.bin
+
+# OS
+.DS_Store
