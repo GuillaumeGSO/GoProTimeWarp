@@ -74,7 +74,7 @@ echo ""
 # ---------------------------------------------------------------------------
 # Step 1 — Probe GPMF track index
 # ---------------------------------------------------------------------------
-echo "[1/3] Probing GPMF track in $BASENAME …"
+echo "[1/4] Probing GPMF track in $BASENAME …"
 TRACK_IDX=$(ffprobe -v quiet -print_format json -show_streams "$INPUT" 2>/dev/null \
     | python3 -c "
 import json, sys
@@ -93,15 +93,15 @@ echo "  GPMF track index: $TRACK_IDX"
 # ---------------------------------------------------------------------------
 # Step 2 — Extract GPMF binary
 # ---------------------------------------------------------------------------
-echo "[2/3] Extracting GPMF binary …"
+echo "[2/4] Extracting GPMF binary …"
 ffmpeg -y -i "$INPUT" -map "0:$TRACK_IDX" -codec copy -f rawvideo "$BIN_OUT" \
-    -loglevel warning -stats
+    -loglevel error -stats
 echo "  Written: $BIN_OUT"
 
 # ---------------------------------------------------------------------------
 # Step 3 — Convert binary to JSON
 # ---------------------------------------------------------------------------
-echo "[3/3] Converting GPMF binary to JSON …"
+echo "[3/4] Converting GPMF binary to JSON …"
 python3 "$SCRIPT_DIR/gpmf2json.py" "$INPUT" "$JSON_OUT" --bin "$BIN_OUT" --track "$TRACK_IDX"
 
 # ---------------------------------------------------------------------------

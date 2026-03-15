@@ -45,8 +45,8 @@ GoProTimeWarp/
     ├── GH015116.MP4                        ← race start clip (6:47 output / 29:50 real)
     ├── GH015116_1_SHUT.json
     ├── GH015116_1_SHUT_speed_timeline.json
-    ├── GH025116.MP4                        ← race continuation (5:25 output / 18:14 real)
-    └── GH025116.bin                        ← kept for reference
+    └── GH025116.MP4                        ← race continuation (5:25 output / 18:14 real)
+    
 ```
 
 ## Toolchain
@@ -119,16 +119,16 @@ python3 detect_speed.py <SHUT.json> [--window N] [--tolerance T] [--min-samples 
 ## Sample Data — GH025116 (Skyrace, 2025-08-30)
 
 - Device: GoPro HERO9 Black
-- Real recording time: ~18 min (1094s)
-- Output video duration: ~5:25 (325s)
+- Real recording time: ~18:12 (1092s)
+- Output video duration: ~5:24 (325s)
 - Overall speed ratio: ×3.36 (predominantly TimeWarp 5x)
 - 43 segments detected
 
 ## Sample Data — GH015116 (Skyrace start, 2025-08-30)
 
-- Real recording time: ~29:50 (1790s)
-- Output video duration: ~6:47 (407s)
-- Overall speed ratio: ×4.39 (predominantly TimeWarp 5x)
+- Real recording time: ~29:36 (1776s)
+- Output video duration: ~6:46 (407s)
+- Overall speed ratio: ×4.37 (predominantly TimeWarp 5x)
 - 84 segments detected
 
 ## Known Limitations
@@ -161,8 +161,8 @@ python3 detect_speed.py <SHUT.json> [--window N] [--tolerance T] [--min-samples 
 # Clip 1 — timer starts at 0
 python3 make_overlay.py Skyrace/GH015116_1_SHUT_speed_timeline.json --timer-start 0
 
-# Clip 2 — timer starts where clip 1 ended (29:50 real time)
-python3 make_overlay.py GH025116_1_SHUT_speed_timeline.json --timer-start 00:29:50
+# Clip 2 — timer starts where clip 1 ended (29:36 real time)
+python3 make_overlay.py GH025116_1_SHUT_speed_timeline.json --timer-start 00:29:36
 ```
 
 **Burn into video:**
