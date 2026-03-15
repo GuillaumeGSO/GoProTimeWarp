@@ -112,6 +112,49 @@ MP4 ──ffmpeg──▶ .bin ──gpmf2json.py──▶ _1_SHUT.json ──de
 2. **gpmf2json.py** parses the binary and queries the MP4 for per-packet timestamps via ffprobe, producing the telemetry JSON (replaces the older `gopro2json` tool which doesn't support modern GoPro firmware)
 3. **detect_speed.py** analyses the telemetry and produces the speed timeline
 
+## Real-time Overlay
+
+After running `process_video.sh`, you can generate a real elapsed time overlay from the speed timeline:
+
+```bash
+python3 make_overlay.py Skyrace/GH015116_1_SHUT_speed_timeline.json
+```
+
+This produces `GH015116_1_SHUT_overlay.ass` — an ASS subtitle file showing the real elapsed time at each frame, accounting for TimeWarp / slo-mo speed changes.
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `--offset-video HH:MM:SS` | `00:00:00` | Start the timer only from this output timestamp (skip pre-race section) |
+| `--timer-start HH:MM:SS` | `00:00:00` | Timer value at the first displayed frame (use for multi-clip races) |
+| `--refresh SECONDS` | `1.0` | Subtitle refresh rate (use `0.04` for 25fps frame-accurate overlay) |
+| `--transparent` | off | Print an ffmpeg command to render on a transparent background (ProRes 4444) |
+| `--fps FPS` | `30` | Frame rate for transparent export |
+
+`--offset-video` and `--timer-start` can be combined freely.
+
+**Burn into video (high quality):**
+```bash
+ffmpeg -i GH015116.MP4 -vf "subtitles=GH015116_1_SHUT_overlay.ass" \
+  -c:v libx264 -crf 18 -preset slow -c:a copy GH015116_overlay.MP4
+```
+
+**Export as transparent layer for video editors (DaVinci Resolve, Premiere, FCP):**
+```bash
+python3 make_overlay.py Skyrace/GH015116_1_SHUT_speed_timeline.json --transparent --fps 30
+# Prints the ffmpeg command → run it to get a ProRes 4444 .mov with alpha channel
+```
+
+> **iMovie:** does not support alpha-channel compositing. Use the burn-in command above instead.
+
+**Multi-clip race example (timer continuity between clips):**
+```bash
+# Clip 1 — timer starts at 0, ends at 29:26 real time
+python3 make_overlay.py Skyrace/GH015116_1_SHUT_speed_timeline.json
+
+# Clip 2 — timer picks up from 29:26
+python3 make_overlay.py Skyrace/GH025116_1_SHUT_speed_timeline.json --timer-start 00:29:26
+```
+
 ## Files
 
 ```
@@ -119,6 +162,7 @@ GoProTimeWarp/
 ├── process_video.sh       ← full pipeline (ffmpeg → gpmf2json → detect_speed)
 ├── gpmf2json.py           ← GPMF binary → JSON (replaces gopro2json)
 ├── detect_speed.py        ← speed segment detection from telemetry JSON
+├── make_overlay.py        ← real-time elapsed time overlay generator
 ├── README.md
 └── CLAUDE.md              ← developer/AI assistant notes
 ```

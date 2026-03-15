@@ -217,6 +217,18 @@ def main():
         metavar="SECONDS",
         help="Subtitle event duration in seconds (default: 1.0; use e.g. 0.04 for 25fps)",
     )
+    parser.add_argument(
+        "--transparent",
+        action="store_true",
+        help="Print an ffmpeg command to render the overlay on a transparent background (ProRes 4444, for DaVinci/Premiere/FCP)",
+    )
+    parser.add_argument(
+        "--fps",
+        type=float,
+        default=30.0,
+        metavar="FPS",
+        help="Frame rate for transparent export (default: 30; match your source video)",
+    )
     args = parser.parse_args()
 
     # Validate and parse
@@ -267,8 +279,28 @@ def main():
     print(f"Timer   : ends at   {fmt_elapsed(total_real + timer_start_s)}")
     print(f"Written : {out_path}")
     print()
-    print("Burn into video:")
-    print(f"  ffmpeg -i <video.MP4> -vf \"subtitles={out_path}\" output.MP4")
+
+    if args.transparent:
+        duration_s = segments[-1]["end_cts_ms"] / 1000.0
+        alpha_stem = out_path.stem
+        if alpha_stem.endswith("_overlay"):
+            alpha_stem = alpha_stem[: -len("_overlay")]
+        alpha_path = out_path.parent / f"{alpha_stem}_alpha.mov"
+        fps_str = f"{args.fps:.2f}".rstrip("0").rstrip(".")
+        print("Transparent overlay (ProRes 4444 with alpha — DaVinci / Premiere / FCP):")
+        print(f"  ffmpeg -f lavfi -i color=c=black@0.0:s=1920x1080:r={fps_str} \\")
+        print(f"    -vf \"subtitles={out_path}\" \\")
+        print(f"    -t {duration_s:.3f} \\")
+        print(f"    -c:v prores_ks -profile:v 4444 -pix_fmt yuva444p10le \\")
+        print(f"    {alpha_path}")
+        print()
+        print("Note: iMovie does not support alpha-channel compositing.")
+        print("      For iMovie, use the standard burn-in command below instead.")
+        print()
+        print("Burn into video (standard, works everywhere including iMovie):")
+    else:
+        print("Burn into video:")
+    print(f"  ffmpeg -i <video.MP4> -vf \"subtitles={out_path}\" -c:v libx264 -crf 18 -preset slow -c:a copy output.MP4")
 
 
 if __name__ == "__main__":

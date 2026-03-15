@@ -30,6 +30,7 @@ GoProTimeWarp/
 ├── process_video.sh                        ← full pipeline (ffmpeg → gpmf2json → detect_speed)
 ├── gpmf2json.py                            ← GPMF binary → JSON (replaces gopro2json)
 ├── detect_speed.py                         ← speed segment detection
+├── make_overlay.py                         ← generate ASS subtitle / transparent overlay from speed timeline
 ├── GH025116_1_SHUT.json                    ← extracted SHUT telemetry (input example)
 ├── GH025116_1_SHUT_speed_timeline.json     ← detected speed segments (output example)
 ├── GH025116_1_SCEN.json                    ← scene classification telemetry (unused so far)
@@ -136,39 +137,50 @@ python3 detect_speed.py <SHUT.json> [--window N] [--tolerance T] [--min-samples 
 - Only SHUT stream is used; GPS5 speed or GYRO could cross-validate detections.
 - No support yet for multi-chapter videos (segments `"2"`, `"3"`, …).
 
-## TODO — Future Features
+## make_overlay.py
 
-### CSV export in detect_speed.py
-- Add `--csv` flag to `detect_speed.py` to export the speed timeline as a CSV file
-- Two possible outputs:
-  - **Segment-level** (one row per segment): `output_start_ms, output_end_ms, real_start, real_end, avg_speed, label`
-  - **Sample-level** (one row per telemetry sample): `cts_ms, date, value, speed_estimate` — useful for plotting
+Generates an ASS subtitle file with a real elapsed time counter from a `_speed_timeline.json`.
 
-### Real-time overlay with ffmpeg
-- Use `_speed_timeline.json` to burn a **real elapsed time counter** onto the video via an ASS subtitle file
-- The overlay shows real elapsed race time at each output frame, derived from segment speed ratios
-- New script: `make_overlay.py <_speed_timeline.json> [options]`
+```
+python3 make_overlay.py <_speed_timeline.json> [options]
+```
 
-**Options:**
-| Option | Example | Description |
+| Option | Default | Description |
 |--------|---------|-------------|
-| `--offset-video` | `--offset-video 00:01:30` | Start the timer only from this output video timestamp (e.g. skip a pre-race section) |
-| `--timer-start` | `--timer-start 00:29:50` | Initial value of the timer at the first displayed frame — essential for multi-clip races where clip 2 picks up where clip 1 left off |
-| `--output` | `--output overlay.ass` | Output ASS file path |
+| `--offset-video` | `00:00:00` | Show timer only from this output video timestamp (skip pre-race section) |
+| `--timer-start` | `00:00:00` | Timer value at the first displayed frame — use for multi-clip races |
+| `--output` | auto | Output ASS file path |
+| `--refresh` | `1.0` | Subtitle event duration in seconds (use e.g. `0.04` for 25fps) |
+| `--transparent` | flag | Print ffmpeg command to render on transparent background (ProRes 4444) |
+| `--fps` | `30` | Frame rate for transparent export (match your source video) |
 
-**Example for a two-clip race:**
+`--offset-video` and `--timer-start` can be combined: timer shows `--timer-start` at the `--offset-video` point and counts up from there.
+
+**Examples:**
 ```bash
 # Clip 1 — timer starts at 0
-python3 make_overlay.py Skyrace/GH015116_1_SHUT_speed_timeline.json --timer-start 0
+python3 make_overlay.py Skyrace/GH015116_1_SHUT_speed_timeline.json
 
-# Clip 2 — timer starts where clip 1 ended (29:36 real time)
-python3 make_overlay.py GH025116_1_SHUT_speed_timeline.json --timer-start 00:29:36
+# Clip 2 — timer picks up where clip 1 ended (29:26 real time)
+python3 make_overlay.py Skyrace/GH025116_1_SHUT_speed_timeline.json --timer-start 00:29:26
+
+# Skip first 40s of output, timer shows 4:00 at that point
+python3 make_overlay.py Skyrace/GH015116_1_SHUT_speed_timeline.json --offset-video 00:00:40 --timer-start 4:00
 ```
 
-**Burn into video:**
+**Burn into video (high quality):**
 ```bash
-ffmpeg -i GH025116.MP4 -vf "subtitles=overlay.ass" GH025116_overlay.MP4
+ffmpeg -i GH025116.MP4 -vf "subtitles=overlay.ass" -c:v libx264 -crf 18 -preset slow -c:a copy GH025116_overlay.MP4
 ```
+- `-crf 18` — visually lossless; lower = better quality (range 0–51)
+- `-c:a copy` — audio copied without re-encoding
 
-- Overlay lines: `MM:SS` real elapsed time (large) + `TimeWarp 5x` speed mode (small, dimmed)
-- ASS format chosen for precise per-frame timing and styling flexibility
+**Export as transparent overlay (for NLE compositing — DaVinci / Premiere / FCP):**
+```bash
+python3 make_overlay.py Skyrace/GH015116_1_SHUT_speed_timeline.json --transparent --fps 30
+# Prints the ffmpeg command → run it to produce a ProRes 4444 .mov with alpha channel
+```
+- iMovie does **not** support alpha compositing — use the burn-in command for iMovie
+
+Overlay shows: `MM:SS` real elapsed time (large, white) + speed mode label (small, dimmed)
+
